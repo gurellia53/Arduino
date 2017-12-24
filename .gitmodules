@@ -4,3 +4,6 @@
 [submodule "hardware/esp8266com/esp8266"]
 	path = hardware/esp8266com/esp8266
 	url = https://github.com/wemos/Arduino_D1.git
+[submodule "libraries/Adafruit_Sensor"]
+	path = libraries/Adafruit_Sensor
+	url = https://github.com/adafruit/Adafruit_Sensor.git
