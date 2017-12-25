@@ -1,4 +1,5 @@
 
+//
 
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
@@ -10,6 +11,9 @@
 #include <ESP8266mDNS.h>
 #include "G:\network_config\network_config_private.h"
 
+#include <door_sensor.h>
+
+
 // DHT
 #define DHTPIN D2    // DHT sensor pin
 #define DHTTYPE DHT11 // DHT11 sensor
@@ -17,10 +21,16 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 
 //Web server
 ESP8266WebServer server(80);
+
+// Wifi
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 #define WIFI_LED D4
-//const int led = 13;
+
+// door sensor
+#define DOOR_NO D6
+#define DOOR_NC D7
+door_sensor door(DOOR_NO, DOOR_NC);
 
 void handleRoot() {
   //digitalWrite(WIFI_LED, 1);
@@ -138,19 +148,41 @@ void dht_periodic()
   }
 }
 
+void door_sensor_init()
+{
+  
+}
+
+void door_sensor_periodic()
+{
+  switch (door.check_door())
+  {
+    case DOOR_OPEN:
+      Serial.println("Door Open");
+      break;
+    case DOOR_CLOSED:
+      Serial.println("Door Closed");
+      break;
+    default:
+      Serial.println("Door Faulted");
+  }
+}
+
+
 void app_init()
 {
   Serial.begin(115200);
   
   wifi_init();
   dht_init();
-  
+  door_sensor_init();
 }
 
 void app_periodic()
 {
   wifi_periodic();
   dht_periodic();
+  door_sensor_periodic();
 }
 
 void setup()
@@ -161,4 +193,5 @@ void setup()
 void loop()
 {
   app_periodic();
+  delay(2000);
 }
