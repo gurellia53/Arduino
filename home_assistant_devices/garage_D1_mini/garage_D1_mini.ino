@@ -60,8 +60,11 @@ void wifi_init()
   // prepare GPIO2
   pinMode(WIFI_LED, OUTPUT);
   digitalWrite(WIFI_LED, HIGH); // HIGH is LED off
-    
+
   WiFi.begin(ssid, password);
+  //WiFi.config(LocalIP, GatewayIP, SubnetMask);
+  WiFi.softAPdisconnect(true); //Disable the node as an access point
+ 
   Serial.println("");
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
