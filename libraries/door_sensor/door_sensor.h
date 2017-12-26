@@ -14,6 +14,7 @@ class door_sensor
 {
     public:
     door_sensor(uint8_t pin_0, uint8_t pin_1);
+    void begin(void);
     char check_door();
     
     private:

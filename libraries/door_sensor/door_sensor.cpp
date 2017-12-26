@@ -6,10 +6,14 @@ door_sensor::door_sensor(uint8_t pin_0, uint8_t pin_1)
 {
     _pin[0] = pin_0;
     _pin[1] = pin_1;
-    
+}
+
+
+void door_sensor::begin()
+{
     // set up the pin
-    pinMode(pin_0, INPUT_PULLUP);
-    pinMode(pin_1, INPUT_PULLUP);
+    pinMode(_pin[0], INPUT_PULLUP);
+    pinMode(_pin[1], INPUT_PULLUP);
 }
 
 char door_sensor::check_door()

@@ -1,6 +1,10 @@
 
 //
 
+//******************************************************************************
+//******************************************************************************
+//******************************************************************************
+
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
@@ -14,6 +18,9 @@
 
 #include <door_sensor.h>
 
+//******************************************************************************
+//******************************************************************************
+//******************************************************************************
 
 // DHT
 #define DHTPIN D2    // DHT sensor pin
@@ -34,11 +41,22 @@ const char* password = WIFI_PASSWORD;
 #define WIFI_LED D4
 
 /* MQTT */
-IPAddress MQTT_server(GARAGE_SUBNET_0, GARAGE_SUBNET_1, GARAGE_SUBNET_2, GARAGE_SUBNET_3);
+// IPAddress MQTT_server(MQTT_SUBNET_0, MQTT_SUBNET_1, MQTT_SUBNET_2, MQTT_SUBNET_3);
+IPAddress MQTT_server(192, 168, 88, 173);
 WiFiClient wclient;
-//PubSubClient MQTT_client(wclient, MQTT_server);
+uint16_t port = MQTT_PORT;
+// PubSubClient MQTT_client(wclient, MQTT_server);
+// PubSubClient MQTT_client(MQTT_server, port, wclient);
 PubSubClient MQTT_client(wclient);
 
+
+float Temp_degF;
+float Humidity_pct;
+uint8_t Door_open;
+
+//******************************************************************************
+//******************************************************************************
+//******************************************************************************
 
 void handleRoot() {
   //digitalWrite(WIFI_LED, 1);
@@ -86,6 +104,16 @@ void wifi_init()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   
+}
+
+void wifi_periodic()
+{
+  // do nothing
+}
+
+void http_server_init()
+{
+
   server.on("/", handleRoot);
 
   server.on("/inline", [](){
@@ -98,11 +126,64 @@ void wifi_init()
   Serial.println("HTTP server started");
 }
 
-void wifi_periodic()
+void http_server_periodic()
 {
   server.handleClient();
 }
 
+
+void mqtt_init()
+{
+  MQTT_client.setServer(MQTT_server, 1883);
+  // client.setCallback(callback);
+}
+
+void mqtt_periodic()
+{
+  Serial.println("0");
+  char tempStr[10] = {0};
+  char humidStr[10] = {0};
+  char doorStr[10] = {0};
+  
+  if(DOOR_OPEN == Door_open)
+    strcpy(doorStr, "Open");
+  else if(DOOR_CLOSED == Door_open)
+    strcpy(doorStr, "Closed");
+  else if(DOOR_FAULTED == Door_open)
+    strcpy(doorStr, "Fault");
+  
+  // digitalWrite ( LED_PIN, LED_ON );
+  
+  Serial.println("1");
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("2");
+    if (!MQTT_client.connected()) {
+      Serial.println("3");
+      if (MQTT_client.connect("GARAGE")) {
+        Serial.println("4");
+        Serial.println("MQTT Connected");
+      } 
+    }
+    Serial.println("5");
+    if (MQTT_client.connected()){
+        Serial.println("6");
+      Serial.println("MQTT Publishing");
+      MQTT_client.publish("GARAGE/Temp_F",dtostrf(Temp_degF, 3, 2, tempStr));
+      MQTT_client.publish("GARAGE/Humidity_Pct",dtostrf(Humidity_pct, 3, 2, humidStr));
+      MQTT_client.publish("GARAGE/Door_Open",doorStr);
+      MQTT_client.loop();
+      Serial.println("7");
+    }
+    Serial.println("8");
+  }
+  Serial.println("9");
+}
+
+
+//******************************************************************************
+//******************************************************************************
+//******************************************************************************
 
 void dht_init()
 {
@@ -161,7 +242,7 @@ void dht_periodic()
 
 void door_sensor_init()
 {
-  
+  door.begin();
 }
 
 void door_sensor_periodic()
@@ -180,11 +261,21 @@ void door_sensor_periodic()
 }
 
 
+//******************************************************************************
+//******************************************************************************
+//******************************************************************************
+//******************************************************************************
+//******************************************************************************
+
+
 void app_init()
 {
   Serial.begin(115200);
   
   wifi_init();
+  http_server_init();
+  mqtt_init();
+  
   dht_init();
   door_sensor_init();
 }
@@ -192,6 +283,9 @@ void app_init()
 void app_periodic()
 {
   wifi_periodic();
+  http_server_periodic();
+  mqtt_periodic();
+  
   dht_periodic();
   door_sensor_periodic();
 }
