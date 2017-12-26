@@ -10,6 +10,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include "G:\network_config\network_config_private.h"
+#include "PubSubClient.h"
 
 #include <door_sensor.h>
 
@@ -19,6 +20,11 @@
 #define DHTTYPE DHT11 // DHT11 sensor
 DHT_Unified dht(DHTPIN, DHTTYPE);
 
+// door sensor
+#define DOOR_NO D6
+#define DOOR_NC D7
+door_sensor door(DOOR_NO, DOOR_NC);
+
 //Web server
 ESP8266WebServer server(80);
 
@@ -27,10 +33,12 @@ const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 #define WIFI_LED D4
 
-// door sensor
-#define DOOR_NO D6
-#define DOOR_NC D7
-door_sensor door(DOOR_NO, DOOR_NC);
+/* MQTT */
+IPAddress MQTT_server(GARAGE_SUBNET_0, GARAGE_SUBNET_1, GARAGE_SUBNET_2, GARAGE_SUBNET_3);
+WiFiClient wclient;
+//PubSubClient MQTT_client(wclient, MQTT_server);
+PubSubClient MQTT_client(wclient);
+
 
 void handleRoot() {
   //digitalWrite(WIFI_LED, 1);
