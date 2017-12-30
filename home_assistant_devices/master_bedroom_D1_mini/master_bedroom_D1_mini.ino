@@ -28,9 +28,6 @@
 #include <DHT.h>
 #include <DHT_U.h>
 
-// Door sensor
-#include <door_sensor.h>
-
 //******************************************************************************
 //**** App Parameters **********************************************************
 //******************************************************************************
@@ -39,11 +36,6 @@
 #define DHTPIN D2    // DHT sensor pin
 #define DHTTYPE DHT11 // DHT11 sensor
 DHT_Unified dht(DHTPIN, DHTTYPE);
-
-// door sensor
-#define DOOR_NO D6
-#define DOOR_NC D7
-door_sensor door(DOOR_NO, DOOR_NC);
 
 //Web server
 ESP8266WebServer server(80);
@@ -76,8 +68,8 @@ unsigned long prev_run_time_1000_ms;
 #define TASK_RATE_2000_MS 2000
 unsigned long prev_run_time_2000_ms;
 
-#define TASK_RATE_10000_MS 10000
-unsigned long prev_run_time_10000_ms;
+#define TASK_RATE_5000_MS 5000
+unsigned long prev_run_time_5000_ms;
 
 //******************************************************************************
 //**** global interfaces *******************************************************
@@ -231,6 +223,7 @@ void mqtt_periodic()
         dtostrf(Temp_degF, 3, 2, tempStr);
     }
     
+    // convert to char*
     if(UNKNOWN_32 == Humidity_pct)
     {
         humidStr[0] = '-';
@@ -241,11 +234,12 @@ void mqtt_periodic()
         dtostrf(Humidity_pct, 3, 2, humidStr);
     }
     
+    // MQTT publish
     if (mqtt_ok_to_publish())
     {
         Serial.println("MQTT Publishing");
-        MQTT_client.publish("BEDROOM/Temp_F",tempStr);
-        MQTT_client.publish("BEDROOM/Humidity_Pct",humidStr);
+        MQTT_client.publish("BEDROOM/Temp_F", tempStr);
+        MQTT_client.publish("BEDROOM/Humidity_Pct", humidStr);
         MQTT_client.loop();
     }
 }
@@ -323,14 +317,14 @@ void dht_periodic()
     
     // if the temperature or humidity has changed, request an update
     if(
-    ((_temperature_prev != _temperature) && (UNKNOWN_32 != _temperature)) || 
-    ((_humidity_prev != _humidity) && (UNKNOWN_32 != _humidity))
+    ((_temperature_prev != Temp_degF) && (UNKNOWN_32 != Temp_degF)) || 
+    ((_humidity_prev != Humidity_pct) && (UNKNOWN_32 != Humidity_pct))
     )
     {
+        Serial.println("Requesting Publish");
         mqtt_update_request = true;
     }
 }
-
 
 //******************************************************************************
 //**** OS functions ************************************************************
@@ -341,37 +335,16 @@ void app_init()
     Serial.begin(115200);
 
     wifi_init();
-    http_server_init();
+    //http_server_init();
     mqtt_init();
 
     dht_init();
-    // door_sensor_init();
 }
 
-void task_100_ms()
-{
-    // door_sensor_periodic();
-    
-    if(true == mqtt_update_request)
-    {
-        mqtt_periodic(); // update mqtt on request
-    }
-}
-
-void task_1000_ms()
-{
-    http_server_periodic();
-}
-
-void task_2000_ms()
+void task_5000_ms()
 {
     dht_periodic();
-}
-
-void task_10000_ms()
-{
     mqtt_periodic();
-    wifi_periodic(); // does nothing
 }
 
 
@@ -387,13 +360,13 @@ void setup()
 void loop()
 {
     // GerthOS
-
+    
     /* We've implemented a super poor-man's scheduler */
     /*  Yah I could use an RTOS, but this was easier  */
     /*  for the limited scope I have... hopefully.    */
     Prev_loop_start_time_ms = Loop_start_time_ms;
     Loop_start_time_ms = millis();
-
+    
     if(Prev_loop_start_time_ms > Loop_start_time_ms)
     {
         /* Handle timer overflow - will probably hit this once every other month */
@@ -402,32 +375,14 @@ void loop()
         prev_run_time_100_ms = 0;
         prev_run_time_1000_ms = 0;
         prev_run_time_2000_ms = 0;
-        prev_run_time_10000_ms = 0;
+        prev_run_time_5000_ms = 0;
     }
-
+    
     // Run tasks
-
-    if(prev_run_time_100_ms + TASK_RATE_100_MS < Loop_start_time_ms) {
-        // Run the 100 millisecond task
-        task_100_ms();
-        prev_run_time_100_ms = Loop_start_time_ms;
-    }
-
-    if(prev_run_time_1000_ms + TASK_RATE_1000_MS < Loop_start_time_ms) {
-        // Run the 1 second task
-        task_1000_ms();
-        prev_run_time_1000_ms = Loop_start_time_ms;
-    }
-
-    if(prev_run_time_2000_ms + TASK_RATE_2000_MS < Loop_start_time_ms) {
-        // Run the 2 second task
-        task_2000_ms();
-        prev_run_time_2000_ms = Loop_start_time_ms;
-    }
-
-    if(prev_run_time_10000_ms + TASK_RATE_10000_MS < Loop_start_time_ms) {
-        // Run the 10 second task
-        task_10000_ms();
-        prev_run_time_10000_ms = Loop_start_time_ms;
+    if(prev_run_time_5000_ms + TASK_RATE_5000_MS < Loop_start_time_ms)
+    {
+        // Run the 5 second task
+        task_5000_ms();
+        prev_run_time_5000_ms = Loop_start_time_ms;
     }
 }
