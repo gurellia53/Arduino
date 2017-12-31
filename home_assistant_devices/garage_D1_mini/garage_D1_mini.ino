@@ -69,16 +69,16 @@ unsigned long Loop_start_time_ms;
 unsigned long Prev_loop_start_time_ms;
 
 #define TASK_RATE_100_MS 100
-unsigned long prev_run_time_100_ms;
+unsigned long prev_run_time_100_ms = 0;
 
 #define TASK_RATE_1000_MS 1000
-unsigned long prev_run_time_1000_ms;
+unsigned long prev_run_time_1000_ms = 0;
 
 #define TASK_RATE_2000_MS 2000
-unsigned long prev_run_time_2000_ms;
+unsigned long prev_run_time_2000_ms = 0;
 
 #define TASK_RATE_5000_MS 5000
-unsigned long prev_run_time_5000_ms;
+unsigned long prev_run_time_5000_ms = 0;
 
 //******************************************************************************
 //**** global interfaces *******************************************************
@@ -128,7 +128,7 @@ float convertCtoF(float c) {
 void wifi_init()
 {
   // prepare GPIO2
-  pinMode(WIFI_LED, OUTPUT);
+  // pinMode(WIFI_LED, OUTPUT);
   digitalWrite(WIFI_LED, HIGH); // HIGH is LED off
 
   WiFi.begin(ssid, password);
@@ -141,7 +141,7 @@ void wifi_init()
     delay(500);
     Serial.print(".");
   }
-  digitalWrite(WIFI_LED, LOW);
+  // digitalWrite(WIFI_LED, LOW);
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
@@ -246,18 +246,18 @@ void mqtt_periodic()
     
     // convert to char*
     if(DOOR_OPEN == Door_open)
-        strcpy(doorStr, "Open");
+        strcpy(doorStr, "open");
     else if(DOOR_CLOSED == Door_open)
-        strcpy(doorStr, "Closed");
+        strcpy(doorStr, "closed");
     else if(DOOR_FAULTED == Door_open)
-        strcpy(doorStr, "Fault");
+        strcpy(doorStr, "fault");
     
     // MQTT publish
     if (mqtt_ok_to_publish()){
       Serial.println("MQTT Publishing");
       MQTT_client.publish("GARAGE/Temp_F", tempStr);
       MQTT_client.publish("GARAGE/Humidity_Pct", humidStr);
-      MQTT_client.publish("GARAGE/Door_Open", doorStr);
+      MQTT_client.publish("GARAGE/Laundry_Door", doorStr);
       MQTT_client.loop();
     }
 
@@ -351,33 +351,31 @@ void dht_periodic()
 
 void door_sensor_init()
 {
-  door.begin();
+    door.begin();
 }
 
 void door_sensor_periodic()
 {
-  uint8_t Door_open_prev = Door_open;
-  
-  switch (door.check_door())
-  {
-    case DOOR_OPEN:
-      Door_open = DOOR_OPEN;
-      Serial.println("Door Open");
-      break;
-    case DOOR_CLOSED:
-      Door_open = DOOR_CLOSED;
-      Serial.println("Door Closed");
-      break;
-    default:
-      Door_open = DOOR_FAULTED;
-      Serial.println("Door Faulted");
-  }
-  
-  // request mqtt update if the door has changed
-  if(Door_open_prev != Door_open)
-  {
-      mqtt_update_request = true;
-  }
+    uint8_t Door_open_prev = Door_open;
+    
+    Door_open = door.check_door();
+    
+    // request mqtt update if the door has changed
+    if(Door_open_prev != Door_open)
+    {
+        switch (Door_open)
+        {
+            case DOOR_OPEN:
+              Serial.println("Door Open");
+              break;
+            case DOOR_CLOSED:
+              Serial.println("Door Closed");
+              break;
+            default:
+              Serial.println("Door Faulted");
+        }
+        mqtt_update_request = true;
+    }
 }
 
 
