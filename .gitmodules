@@ -10,3 +10,6 @@
 [submodule "libraries/pubsubclient"]
 	path = libraries/pubsubclient
 	url = https://github.com/knolleary/pubsubclient.git
+[submodule "libraries/Arduino-IRremote"]
+	path = libraries/Arduino-IRremote
+	url = https://github.com/z3t0/Arduino-IRremote.git
